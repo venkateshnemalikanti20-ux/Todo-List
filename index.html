@@ -1,0 +1,124 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f5f6fc">
+  <title>TaskFlow | To-Do List</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="TaskFlow home">
+        <span class="brand-icon">✓</span>
+        <span>TaskFlow</span>
+      </a>
+      <span class="today" id="today"></span>
+    </header>
+
+    <section class="welcome">
+      <p class="eyebrow">YOUR PERSONAL WORKSPACE</p>
+      <h1>Make today <span>count.</span></h1>
+      <p class="subtitle">
+        Small steps every day lead to big results.
+        Let's get things done.
+      </p>
+    </section>
+
+    <section class="stats" aria-label="Task statistics">
+      <article class="stat-card">
+        <span class="stat-icon purple">▤</span>
+        <div>
+          <p>Total tasks</p>
+          <h2 id="totalCount">0</h2>
+        </div>
+      </article>
+
+      <article class="stat-card">
+        <span class="stat-icon orange">◷</span>
+        <div>
+          <p>In progress</p>
+          <h2 id="activeCount">0</h2>
+        </div>
+      </article>
+
+      <article class="stat-card">
+        <span class="stat-icon green">✓</span>
+        <div>
+          <p>Completed</p>
+          <h2 id="completedCount">0</h2>
+        </div>
+      </article>
+    </section>
+
+    <section class="task-panel">
+      <div class="panel-heading">
+        <div>
+          <h2>My tasks</h2>
+          <p>Organize your day, one task at a time.</p>
+        </div>
+        <span class="task-badge" id="taskBadge">0 tasks</span>
+      </div>
+
+      <form id="taskForm" class="task-form">
+        <label class="sr-only" for="taskInput">Enter a new task</label>
+        <span class="input-icon" aria-hidden="true">＋</span>
+        <input
+          id="taskInput"
+          type="text"
+          placeholder="What needs to get done?"
+          maxlength="200"
+          autocomplete="off"
+          required
+        >
+        <button class="add-button" type="submit">
+          <span>＋</span> Add task
+        </button>
+      </form>
+
+      <p id="message" class="message" role="status" aria-live="polite"></p>
+
+      <div class="toolbar">
+        <div class="filters" role="group" aria-label="Filter tasks">
+          <button class="filter active" type="button"
+            data-filter="all" aria-pressed="true">All</button>
+          <button class="filter" type="button"
+            data-filter="active" aria-pressed="false">Active</button>
+          <button class="filter" type="button"
+            data-filter="completed" aria-pressed="false">Completed</button>
+        </div>
+
+        <label class="search-box">
+          <span aria-hidden="true">⌕</span>
+          <input id="searchInput" type="search"
+            placeholder="Search tasks..." aria-label="Search tasks">
+        </label>
+      </div>
+
+      <ul id="taskList" class="task-list" aria-label="Your tasks"></ul>
+
+      <div id="emptyState" class="empty-state">
+        <div class="empty-illustration" aria-hidden="true">✦</div>
+        <h3 id="emptyTitle">A fresh start!</h3>
+        <p id="emptyDescription">
+          Your task list is empty. Add your first task above.
+        </p>
+      </div>
+
+      <footer class="list-footer">
+        <span id="footerText">You're ready to get started!</span>
+        <button id="clearCompleted" class="clear-button" type="button">
+          Clear completed
+        </button>
+      </footer>
+    </section>
+
+    <p class="app-note">
+      Made for a more focused you <span>♥</span>
+    </p>
+  </main>
+</body>
+</html>
