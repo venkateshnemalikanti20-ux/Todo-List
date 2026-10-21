@@ -33,7 +33,7 @@ const aiAddSelected = document.getElementById("aiAddSelected");
 
 // Local backend address for development.
 // We will update this after deploying the backend.
-const AI_API_URL = "http://localhost:3003/api/breakdown";
+const AI_API_URL = "https://taskflow-ai-backend-2d08.onrender.com/api/breakdown";
 
 let currentFilter = "all";
 let tasks = loadTasks();
