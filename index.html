@@ -1,12 +1,12 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#f5f6fc">
-  <title>TaskFlow | To-Do List</title>
+  <title>TaskFlow | AI To-Do List</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style1.css">
   <script src="script.js" defer></script>
 </head>
 <body>
@@ -27,6 +27,60 @@
         Let's get things done.
       </p>
     </section>
+
+    <!-- NEW: AI Task Breakdown -->
+    <section class="ai-panel" aria-labelledby="aiHeading">
+      <div class="ai-heading">
+        <div class="ai-icon" aria-hidden="true">✦</div>
+        <div>
+          <p class="eyebrow">YOUR AI ASSISTANT</p>
+          <h2 id="aiHeading">Turn big goals into small steps</h2>
+          <p class="ai-description">
+            Tell AI what you want to achieve. It will suggest manageable tasks.
+          </p>
+        </div>
+      </div>
+
+      <form id="aiForm" class="ai-form">
+        <label class="sr-only" for="aiGoalInput">
+          Enter a goal to break down
+        </label>
+        <input
+          id="aiGoalInput"
+          type="text"
+          placeholder="e.g. Prepare for a full-stack developer interview"
+          maxlength="500"
+          autocomplete="off"
+          required
+        >
+        <button id="aiGenerateButton" class="ai-button" type="submit">
+          <span aria-hidden="true">✦</span>
+          Break down with AI
+        </button>
+      </form>
+
+      <p id="aiMessage" class="ai-message" role="status"
+         aria-live="polite"></p>
+
+      <div id="aiResults" class="ai-results" hidden>
+        <div class="ai-results-heading">
+          <div>
+            <h3>Suggested subtasks</h3>
+            <p>Select the tasks you want to add to your list.</p>
+          </div>
+          <button id="aiSelectAll" class="ai-text-button" type="button">
+            Select all
+          </button>
+        </div>
+
+        <ul id="aiSubtaskList" class="ai-subtask-list"></ul>
+
+        <button id="aiAddSelected" class="ai-add-selected" type="button">
+          Add selected tasks to my list
+        </button>
+      </div>
+    </section>
+    <!-- END: AI Task Breakdown -->
 
     <section class="stats" aria-label="Task statistics">
       <article class="stat-card">

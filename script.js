@@ -3,6 +3,7 @@
 
 const STORAGE_KEY = "todoList";
 
+// Existing To-Do List elements
 const taskForm = document.getElementById("taskForm");
 const taskInput = document.getElementById("taskInput");
 const taskList = document.getElementById("taskList");
@@ -20,8 +21,23 @@ const clearCompletedButton = document.getElementById("clearCompleted");
 const todayElement = document.getElementById("today");
 const filterButtons = document.querySelectorAll(".filter");
 
+// AI elements
+const aiForm = document.getElementById("aiForm");
+const aiGoalInput = document.getElementById("aiGoalInput");
+const aiGenerateButton = document.getElementById("aiGenerateButton");
+const aiMessage = document.getElementById("aiMessage");
+const aiResults = document.getElementById("aiResults");
+const aiSubtaskList = document.getElementById("aiSubtaskList");
+const aiSelectAll = document.getElementById("aiSelectAll");
+const aiAddSelected = document.getElementById("aiAddSelected");
+
+// Local backend address for development.
+// We will update this after deploying the backend.
+const AI_API_URL = "http://localhost:3003/api/breakdown";
+
 let currentFilter = "all";
 let tasks = loadTasks();
+let generatedSubtasks = [];
 
 todayElement.textContent = new Intl.DateTimeFormat("en-US", {
   weekday: "short",
@@ -75,6 +91,15 @@ function showMessage(text = "") {
   message.textContent = text;
 }
 
+function showAIMessage(text = "", type = "") {
+  aiMessage.textContent = text;
+  aiMessage.className = "ai-message";
+
+  if (type) {
+    aiMessage.classList.add(type);
+  }
+}
+
 function formatDate(dateString) {
   const date = new Date(dateString);
 
@@ -87,7 +112,52 @@ function formatDate(dateString) {
   }).format(date);
 }
 
-// Add a new task.
+// Add a task using the same validation and storage logic
+// for both manual tasks and AI-generated tasks.
+function addTask(text, options = {}) {
+  const { showSuccess = true } = options;
+  const cleanText = text.trim();
+
+  if (!cleanText) {
+    showMessage("Please enter a valid task.");
+    return false;
+  }
+
+  const duplicate = tasks.some(task =>
+    task.text.toLowerCase() === cleanText.toLowerCase()
+  );
+
+  if (duplicate) {
+    return false;
+  }
+
+  const newTask = {
+    id: createTaskId(),
+    text: cleanText,
+    completed: false,
+    createdAt: new Date().toISOString()
+  };
+
+  tasks.unshift(newTask);
+
+  if (!saveTasks()) {
+    tasks.shift();
+    return false;
+  }
+
+  searchInput.value = "";
+  currentFilter = "all";
+  updateFilterButtons();
+  renderTasks();
+
+  if (showSuccess) {
+    showMessage("Task added successfully!");
+  }
+
+  return true;
+}
+
+// Add a new task through the original form.
 taskForm.addEventListener("submit", function (event) {
   event.preventDefault();
 
@@ -109,32 +179,17 @@ taskForm.addEventListener("submit", function (event) {
     return;
   }
 
-  const newTask = {
-    id: createTaskId(),
-    text: text,
-    completed: false,
-    createdAt: new Date().toISOString()
-  };
-
-  tasks.unshift(newTask);
-
-  if (!saveTasks()) {
-    tasks.shift();
-    return;
+  if (addTask(text)) {
+    taskInput.value = "";
+    taskInput.focus();
   }
-
-  taskInput.value = "";
-  searchInput.value = "";
-  currentFilter = "all";
-  updateFilterButtons();
-  showMessage("Task added successfully!");
-  renderTasks();
-  taskInput.focus();
 });
 
 function createTaskId() {
-  if (typeof crypto !== "undefined" &&
-      typeof crypto.randomUUID === "function") {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
     return crypto.randomUUID();
   }
 
@@ -286,7 +341,6 @@ taskList.addEventListener("change", function (event) {
 function editTask(task) {
   const updatedText = prompt("Edit your task:", task.text);
 
-  // Cancel was clicked.
   if (updatedText === null) return;
 
   const text = updatedText.trim();
@@ -384,6 +438,232 @@ clearCompletedButton.addEventListener("click", function () {
   renderTasks();
 });
 
+// ============================
+// AI TASK BREAKDOWN
+// ============================
+
+// Ask the backend to break a goal into smaller tasks.
+aiForm.addEventListener("submit", async function (event) {
+  event.preventDefault();
+
+  const goal = aiGoalInput.value.trim();
+
+  if (!goal) {
+    showAIMessage("Please enter a goal first.", "error");
+    aiGoalInput.focus();
+    return;
+  }
+
+  aiGenerateButton.disabled = true;
+  aiGenerateButton.textContent = "Generating...";
+  aiResults.hidden = true;
+  aiSubtaskList.replaceChildren();
+  generatedSubtasks = [];
+  showAIMessage("AI is creating your suggested tasks. Please wait.");
+
+  try {
+    const response = await fetch(AI_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ task: goal })
+    });
+
+    let data;
+
+    try {
+      data = await response.json();
+    } catch {
+      throw new Error("The server returned an invalid response.");
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        data.error || `The server returned error ${response.status}.`
+      );
+    }
+
+    if (
+      !data ||
+      !Array.isArray(data.subtasks) ||
+      data.subtasks.length === 0 ||
+      !data.subtasks.every(
+        item => typeof item === "string" && item.trim()
+      )
+    ) {
+      throw new Error("AI did not return a valid task list. Please try again.");
+    }
+
+    generatedSubtasks = [
+      ...new Set(data.subtasks.map(item => item.trim()))
+    ];
+
+    if (generatedSubtasks.length === 0) {
+      throw new Error("No usable tasks were generated. Please try again.");
+    }
+
+    renderAISubtasks();
+    aiResults.hidden = false;
+    showAIMessage(
+      `Successfully generated ${generatedSubtasks.length} suggested tasks.`,
+      "success"
+    );
+  } catch (error) {
+    console.error("AI task breakdown failed:", error);
+
+    if (error instanceof TypeError) {
+      showAIMessage(
+        "Could not connect to the AI backend. Make sure your server is running on port 3003.",
+        "error"
+      );
+    } else {
+      showAIMessage(
+        error.message || "Something went wrong. Please try again.",
+        "error"
+      );
+    }
+  } finally {
+    aiGenerateButton.disabled = false;
+    aiGenerateButton.replaceChildren();
+
+    const sparkle = document.createElement("span");
+    sparkle.setAttribute("aria-hidden", "true");
+    sparkle.textContent = "✦";
+    aiGenerateButton.append(sparkle, document.createTextNode(" Break down with AI"));
+  }
+});
+
+// Display AI suggestions with checkboxes.
+function renderAISubtasks() {
+  aiSubtaskList.replaceChildren();
+
+  generatedSubtasks.forEach((subtask, index) => {
+    const item = document.createElement("li");
+    item.className = "ai-subtask-item";
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.id = `ai-subtask-${index}`;
+    checkbox.checked = true;
+    checkbox.dataset.subtaskIndex = String(index);
+
+    const label = document.createElement("label");
+    label.htmlFor = checkbox.id;
+    label.textContent = subtask;
+
+    item.append(checkbox, label);
+    aiSubtaskList.appendChild(item);
+  });
+
+  updateAISelectionButton();
+}
+
+// Select or deselect all suggested tasks.
+aiSelectAll.addEventListener("click", function () {
+  const checkboxes = aiSubtaskList.querySelectorAll(
+    'input[type="checkbox"]'
+  );
+
+  const shouldSelectAll = Array.from(checkboxes).some(
+    checkbox => !checkbox.checked
+  );
+
+  checkboxes.forEach(checkbox => {
+    checkbox.checked = shouldSelectAll;
+  });
+
+  updateAISelectionButton();
+});
+
+aiSubtaskList.addEventListener("change", function (event) {
+  if (event.target.matches('input[type="checkbox"]')) {
+    updateAISelectionButton();
+  }
+});
+
+function updateAISelectionButton() {
+  const checkboxes = Array.from(
+    aiSubtaskList.querySelectorAll('input[type="checkbox"]')
+  );
+
+  const allSelected =
+    checkboxes.length > 0 &&
+    checkboxes.every(checkbox => checkbox.checked);
+
+  aiSelectAll.textContent = allSelected ? "Deselect all" : "Select all";
+}
+
+// Add the selected AI suggestions to the existing To-Do List.
+aiAddSelected.addEventListener("click", function () {
+  const selectedCheckboxes = Array.from(
+    aiSubtaskList.querySelectorAll('input[type="checkbox"]:checked')
+  );
+
+  if (selectedCheckboxes.length === 0) {
+    showAIMessage("Select at least one task to add.", "error");
+    return;
+  }
+
+  let addedCount = 0;
+  let duplicateCount = 0;
+  let failedCount = 0;
+
+  selectedCheckboxes.forEach(checkbox => {
+    const index = Number(checkbox.dataset.subtaskIndex);
+    const subtask = generatedSubtasks[index];
+
+    if (!subtask) return;
+
+    const exists = tasks.some(task =>
+      task.text.toLowerCase() === subtask.toLowerCase()
+    );
+
+    if (exists) {
+      duplicateCount++;
+      return;
+    }
+
+    if (addTask(subtask, { showSuccess: false })) {
+      addedCount++;
+    } else {
+      failedCount++;
+    }
+  });
+
+  if (addedCount > 0) {
+    showMessage(
+      `Added ${addedCount} AI-generated task${addedCount === 1 ? "" : "s"} to your list.`
+    );
+  }
+
+  if (failedCount > 0) {
+    showAIMessage(
+      `${addedCount} task(s) added. Some tasks could not be saved; check browser storage.`,
+      "error"
+    );
+  } else if (addedCount === 0 && duplicateCount > 0) {
+    showAIMessage(
+      "These suggested tasks already exist in your list.",
+      "error"
+    );
+  } else {
+    const duplicateNote = duplicateCount > 0
+      ? ` ${duplicateCount} duplicate task(s) skipped.`
+      : "";
+
+    showAIMessage(
+      `Added ${addedCount} task${addedCount === 1 ? "" : "s"}.${duplicateNote}`,
+      "success"
+    );
+  }
+
+  if (addedCount > 0) {
+    aiResults.hidden = true;
+    aiGoalInput.value = "";
+  }
+});
+
 // Refresh the statistics and footer.
 function updateStatistics() {
   const total = tasks.length;
@@ -408,6 +688,12 @@ function updateStatistics() {
 // Clear old validation messages while typing.
 taskInput.addEventListener("input", function () {
   showMessage("");
+});
+
+aiGoalInput.addEventListener("input", function () {
+  if (aiMessage.classList.contains("error")) {
+    showAIMessage("");
+  }
 });
 
 // Initial page render.
